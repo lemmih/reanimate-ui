@@ -112,7 +112,6 @@ impl<X: View> Hydrateable for ViewHierarchy<X> {
     fn perform_hydrate(&mut self, new: Self::Body) {
         let ViewHierarchy { view, children } = self;
         if view == &new {
-            // eprintln!("View didn't change. Cloning previous body.");
             Hydrateable::perform_hydrate(children, children.clone_body());
         } else {
             Hydrate::hydrate(view, new);
