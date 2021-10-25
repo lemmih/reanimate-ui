@@ -1,6 +1,4 @@
 #![feature(type_alias_impl_trait)]
-use std::any::Any;
-use std::mem::size_of;
 
 use reanimate_ui::*;
 
@@ -149,8 +147,8 @@ fn hydrate_test() {
             .children
             .view
             .assume::<(StateLocalTest, StateLocalTest)>();
-        // view.0.state.0 = 1;
-        // view.1.state.0 = 2;
+        view.0.state.0 = 1;
+        view.1.state.0 = 2;
         // let view: &mut (StateLocalTest, StateLocalTest) = (&mut hierarchy.children.view
         //     as &mut dyn Any)
         //     .downcast_mut()

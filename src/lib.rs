@@ -1,11 +1,9 @@
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_defaults)]
-#![allow(dead_code)]
+// #![allow(dead_code)]
 
 use std::any::Any;
-use std::cell::RefCell;
 use std::fmt::Debug;
-use std::rc::Rc;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Hydrate
@@ -13,17 +11,7 @@ use std::rc::Rc;
 // Copy variables from 'new' into self. Don't override state variables.
 pub trait Hydrate {
     fn hydrate(&mut self, new: Self);
-    fn render(&self) {
-        ()
-    }
-    fn empty(&self) -> bool {
-        false
-    }
 }
-
-// impl<const B: bool> Hydrate for () {
-//     fn hydrate(&mut self, previous: &Self) {}
-// }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Render
@@ -51,7 +39,7 @@ impl<X: View> Render for ViewHierarchy<X> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// View
+// View helpers (HasBody, Hydrateable, Buildable)
 
 pub trait HasBody {
     type Body;
@@ -131,6 +119,9 @@ impl<X: View> Buildable for ViewHierarchy<X> {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// View
+
 pub trait View: Any + Debug + Hydrate + Sized + PartialEq + Clone
 where
     Self::Body: View,
@@ -152,6 +143,7 @@ where
 
     // Unpack 'impl View' into a specific type. Doesn't fail at compile-time but
     // no checking happens at run-time.
+    // This function is only used during testing.
     fn assume<X: 'static>(self: &mut Self) -> &mut X {
         let self_dyn = self as &mut dyn Any;
         self_dyn.downcast_mut::<X>().expect("static type error")
@@ -160,37 +152,13 @@ where
 
 impl<A: View, B: View> View for (A, B) {
     type Body = (A::Body, B::Body);
-    // type Children = (ViewHierarchy<A::Body>, ViewHierarchy<B::Body>);
     type Children = (A::Children, B::Children);
-    // type Children = (<A::Body as View>::Children, <B::Body as View>::Children);
     fn body(&self) -> Self::Body {
         (self.0.body(), self.1.body())
     }
-    // fn build_children(&self) -> Self::Children {
-    //     (View::build_children(&self.0), View::build_children(&self.1))
-    // }
-    // self:     (Text, Text)
-    // Children: (ViewHierarchy<()>, ViewHierarchy<()>)
-    // render(Text, Text::Body)
-    // ViewHierarchy<A>
-    //   view: A
-    //   body: A::Children
-    // ViewHierarchy<(A,B)>
-    //   view: (A,B)
-    //   body: (A::Body::Children, B::Body::Children)
     fn render(&self, children: &Self::Children) {
         View::render(&self.0, &children.0);
         View::render(&self.1, &children.1);
-        // Render::render(ViewHierarchy {
-        //     view: self.0,
-        //     body: children.0,
-        // });
-        // Render::render(children)
-        // View::render(&self.0, children.0)
-        // let (view0, view1) = self;
-        // let (sub0, sub1) = children;
-        // View::render(view0, sub0);
-        // View::render(view1, sub1);
     }
 }
 
@@ -198,9 +166,6 @@ impl<A: View, B: View> Hydrate for (A, B) {
     fn hydrate(&mut self, previous: Self) {
         self.0.hydrate(previous.0);
         self.1.hydrate(previous.1);
-    }
-    fn empty(&self) -> bool {
-        self.0.empty() && self.1.empty()
     }
 }
 
@@ -217,10 +182,6 @@ impl View for () {
 
 impl Hydrate for () {
     fn hydrate(&mut self, _: Self) {}
-    fn render(&self) {}
-    fn empty(&self) -> bool {
-        true
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -245,93 +206,62 @@ impl View for Text {
     fn body(&self) -> Self::Body {
         ()
     }
-    fn build_children(&self) -> Self::Children {
-        ()
-    }
-    // fn render(&self, children: &Self::Children) {
-    //     println!("Rendering Text");
-    // }
 }
 
 impl Hydrate for Text {
-    fn hydrate(&mut self, _: Self) {
-        eprintln!("hydrate Text")
-    }
+    fn hydrate(&mut self, _: Self) {}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Layout
 
-// LayoutFlex
-pub struct LayoutFlex<X> {
-    pub flex: u32,
-    pub view: X,
-}
+// // LayoutFlex
+// pub struct LayoutFlex<X> {
+//     pub flex: u32,
+//     pub view: X,
+// }
 
-pub struct GetLayoutFlex {
-    pub set_flex: fn(u32),
-}
+// pub struct GetLayoutFlex {
+//     pub set_flex: fn(u32),
+// }
 
-pub struct EnvVar {
-    pub some_value: u32,
-}
+// pub struct EnvVar {
+//     pub some_value: u32,
+// }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Layout {
-    pub offset_x: f32,
-    pub offset_y: f32,
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct Layout {
+//     pub offset_x: f32,
+//     pub offset_y: f32,
+// }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Placer<X: View> {
-    pub layout: Layout,
-    pub view: X,
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct Placer<X: View> {
+//     pub layout: Layout,
+//     pub view: X,
+// }
 
-impl<X: View> View for Placer<X> {
-    type Body = X::Body;
-    type Children = X::Children;
-    fn body(&self) -> Self::Body {
-        self.view.body()
-    }
-    fn build_children(&self) -> Self::Children {
-        self.view.build_children()
-    }
-    fn render(&self, children: &Self::Children) {
-        println!("Container: {}", std::any::type_name::<Self>());
-        View::render(&self.view, children)
-    }
-}
+// impl<X: View> View for Placer<X> {
+//     type Body = X::Body;
+//     type Children = X::Children;
+//     fn body(&self) -> Self::Body {
+//         self.view.body()
+//     }
+//     fn build_children(&self) -> Self::Children {
+//         self.view.build_children()
+//     }
+//     fn render(&self, children: &Self::Children) {
+//         println!("Container: {}", std::any::type_name::<Self>());
+//         View::render(&self.view, children)
+//     }
+// }
 
-impl<X: View> Hydrate for Placer<X> {
-    fn hydrate(&mut self, _: Self) {}
-}
+// impl<X: View> Hydrate for Placer<X> {
+//     fn hydrate(&mut self, _: Self) {}
+// }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Test app
-
-/*
-View hierarchy:
-
-S=1          S=2
-Root         Root
-|- A         |- A
-|- B         |- B
-|  |- C      |- E
-|  |- D
-|- E
-
-When state change, recompute entire view hierarchy.
-When rendering, walk the tree.
-
-
-Conditional<X>       Conditional<X>
-|- None              |- Some(X)
-
-Store<X>
-|-
-
-*/
+// ViewHierarchy
 
 #[derive(Debug)]
 pub struct ViewHierarchy<X: View> {
@@ -341,49 +271,25 @@ pub struct ViewHierarchy<X: View> {
 
 impl<X: View> ViewHierarchy<X> {
     pub fn new(view: X) -> ViewHierarchy<X> {
-        // view.build()
         let children = view.build_children();
         ViewHierarchy { view, children }
-        // ViewHierarchy {
-        //     view: view,
-        //     body: todo!(), // view.body(),
-        // }
     }
 }
 
-/*
-ViewHierarchy
-  view: App{}
-  body: Some ViewHierarchy
-    view: (Text, Text)
-    body: None
-*/
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct InternalTestView {}
 
-/*
+// impl Hydrate for InternalTestView {
+//     fn hydrate(&mut self, _: Self) {}
+// }
 
-VStack { Text1, Text2 }
-|- Offset(x,y) Text1
-|- Offset(x,y) Text2
-
-
-size: Constraints -> (Width, Height)
-
-*/
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct InternalTestView {}
-
-impl Hydrate for InternalTestView {
-    fn hydrate(&mut self, _: Self) {}
-}
-
-impl View for InternalTestView {
-    type Body = impl View;
-    type Children = ViewHierarchy<Self::Body>;
-    fn body(&self) -> Self::Body {
-        ()
-    }
-}
+// impl View for InternalTestView {
+//     type Body = impl View;
+//     type Children = ViewHierarchy<Self::Body>;
+//     fn body(&self) -> Self::Body {
+//         ()
+//     }
+// }
 
 // pub fn print_view() {
 //     let hierarchy = ViewHierarchy::new(InternalTestView {});
@@ -404,21 +310,13 @@ impl<X> State<X> {
 }
 
 impl<X> Hydrate for State<X> {
-    fn hydrate(&mut self, other: Self) {}
+    fn hydrate(&mut self, _other: Self) {}
 }
 
-// Check if 'assume' is zero-cost.
-pub fn downcast_test() -> bool {
-    let mut x = InternalTestView {}.body();
-    let view: &mut () = x.assume();
-    true
-    // if x == () {
-    //     eprintln!("OK");
-    // } else {
-    //     eprintln!("Bad");
-    // }
-}
-
-fn my_function() -> impl Debug {
-    true
-}
+// // Check if 'assume' is zero-cost.
+// // Run: cargo asm --rust reanimate_ui::downcast_test
+// pub fn downcast_test() -> bool {
+//     let mut x = InternalTestView {}.body();
+//     let view: &mut () = x.assume();
+//     true
+// }
