@@ -420,8 +420,46 @@ impl<P: Clone + PartialEq + Debug + 'static, X: View> View for Property<P, X> {
 }
 
 impl<P, X: View> Hydrate for Property<P, X> {
-    fn hydrate(&mut self, _: Self) {}
+    fn hydrate(&mut self, other: Self) {
+        self.property = other.property;
+        self.view.hydrate(other.view);
+    }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Observe Hydrate
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ObserveHydrate<X: View>(pub X);
+
+impl<X: View> View for ObserveHydrate<X> {
+    type Children = X::Children;
+    type Body = X::Body;
+    fn body(&self) -> Self::Body {
+        self.0.body()
+    }
+
+    fn build_children(&self) -> Self::Children {
+        self.0.build_children()
+    }
+}
+
+impl<X: View> Hydrate for ObserveHydrate<X> {
+    fn hydrate(&mut self, other: Self) {
+        println!(
+            "  Hydrating:\n    Old: {:?}\n    New: {:?}",
+            self.0, &other.0
+        );
+        self.0.hydrate(other.0);
+    }
+}
+
+pub trait ObservableHydrate: View {
+    fn observe_hydrate(self) -> ObserveHydrate<Self> {
+        ObserveHydrate(self)
+    }
+}
+impl<X: View> ObservableHydrate for X {}
 
 ////////////////////////////////////////////////////////////////////////////////
 // TreeBuilder
