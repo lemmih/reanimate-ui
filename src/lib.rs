@@ -344,3 +344,33 @@ impl<X> Hydrate for State<X> {
 //     let view: &mut () = x.assume();
 //     true
 // }
+
+////////////////////////////////////////////////////////////////////////////////
+// Value view
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Value<X>(X);
+
+impl<X> Value<X> {
+    pub fn new(value: X) -> Self {
+        Value(value)
+    }
+}
+
+impl<X: Clone + PartialEq + Debug + 'static> View for Value<X> {
+    type Body = ();
+    type Children = ();
+    fn body(&self) -> Self::Body {
+        ()
+    }
+    fn build_children(&self) -> Self::Children {
+        ()
+    }
+}
+
+// This impl will be derived.
+impl<X> Hydrate for Value<X> {
+    fn hydrate(&mut self, other: Self) {
+        *self = other;
+    }
+}
