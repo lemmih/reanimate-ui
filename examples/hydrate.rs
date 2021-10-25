@@ -61,90 +61,39 @@ impl Hydrate for Level2 {
 fn main() {
     eprintln!("Initial state:");
     let mut hierarchy = ViewHierarchy::new(App::new());
-    dbg!(&hierarchy);
+    // dbg!(&hierarchy);
+    hierarchy.pretty_print();
 
     eprintln!("\nSetting App.root_state = 10");
     hierarchy.view.root_state.0 = 10;
     hierarchy.perform_hydrate(App::new());
-    dbg!(&hierarchy);
+    // dbg!(&hierarchy);
+    hierarchy.pretty_print();
 
     eprintln!("\nSetting App.Level2.view_state = 100");
     hierarchy.children.view.assume::<Level2>().view_state.0 = 100;
     hierarchy.perform_hydrate(App::new());
-    dbg!(&hierarchy);
+    // dbg!(&hierarchy);
+    hierarchy.pretty_print();
 }
 
 /* Output:
 
 Initial state:
-[examples/hydrate.rs:64] &hierarchy = ViewHierarchy {
-    view: App {
-        root_state: State(
-            0,
-        ),
-        root_ro: 1,
-    },
-    children: ViewHierarchy {
-        view: Level2 {
-            view_state: State(
-                0,
-            ),
-            view_prop: 1,
-        },
-        children: ViewHierarchy {
-            view: Value(
-                1,
-            ),
-            children: (),
-        },
-    },
-}
+ViewHierarchy
+└─ App { root_state: State(0), root_ro: 1 }
+   └─ Level2 { view_state: State(0), view_prop: 1 }
+      └─ Value(1)
 
 Setting App.root_state = 10
-[examples/hydrate.rs:69] &hierarchy = ViewHierarchy {
-    view: App {
-        root_state: State(
-            10,
-        ),
-        root_ro: 1,
-    },
-    children: ViewHierarchy {
-        view: Level2 {
-            view_state: State(
-                0,
-            ),
-            view_prop: 11,
-        },
-        children: ViewHierarchy {
-            view: Value(
-                11,
-            ),
-            children: (),
-        },
-    },
-}
+ViewHierarchy
+└─ App { root_state: State(10), root_ro: 1 }
+   └─ Level2 { view_state: State(0), view_prop: 11 }
+      └─ Value(11)
 
 Setting App.Level2.view_state = 100
-[examples/hydrate.rs:74] &hierarchy = ViewHierarchy {
-    view: App {
-        root_state: State(
-            10,
-        ),
-        root_ro: 1,
-    },
-    children: ViewHierarchy {
-        view: Level2 {
-            view_state: State(
-                100,
-            ),
-            view_prop: 11,
-        },
-        children: ViewHierarchy {
-            view: Value(
-                111,
-            ),
-            children: (),
-        },
-    },
-}
+ViewHierarchy
+└─ App { root_state: State(10), root_ro: 1 }
+   └─ Level2 { view_state: State(100), view_prop: 11 }
+      └─ Value(111)
 */

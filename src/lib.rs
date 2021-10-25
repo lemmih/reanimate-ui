@@ -27,6 +27,7 @@
 // #![allow(dead_code)]
 
 use std::any::Any;
+use std::any::TypeId;
 use std::fmt::Debug;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -151,6 +152,7 @@ where
     Self::Body: View,
     Self::Children: Render + Hydrateable + HasBody<Body = Self::Body>,
     Self::Children: Buildable + Debug + Sized,
+    Self::Children: Tree,
 {
     type Body;
     type Children = ViewHierarchy<Self::Body>;
@@ -172,6 +174,14 @@ where
         let self_dyn = self as &mut dyn Any;
         self_dyn.downcast_mut::<X>().expect("static type error")
     }
+
+    fn mk_tree(&self, children: &Self::Children, builder: &mut TreeBuilder) {
+        if self.type_id() != TypeId::of::<()>() {
+            builder.begin_child(format!("{:?}", self));
+            Tree::mk_tree(children, builder);
+            builder.end_child();
+        }
+    }
 }
 
 impl<A: View, B: View> View for (A, B) {
@@ -183,6 +193,10 @@ impl<A: View, B: View> View for (A, B) {
     fn render(&self, children: &Self::Children) {
         View::render(&self.0, &children.0);
         View::render(&self.1, &children.1);
+    }
+    fn mk_tree(&self, children: &Self::Children, builder: &mut TreeBuilder) {
+        self.0.mk_tree(&children.0, builder);
+        self.1.mk_tree(&children.1, builder)
     }
 }
 
@@ -298,6 +312,16 @@ impl<X: View> ViewHierarchy<X> {
         let children = view.build_children();
         ViewHierarchy { view, children }
     }
+
+    pub fn tree(&self) -> StringItem {
+        let mut builder = TreeBuilder::new("ViewHierarchy".to_string());
+        Tree::mk_tree(self, &mut builder);
+        builder.build()
+    }
+
+    pub fn pretty_print(&self) {
+        print_tree(&self.tree()).unwrap();
+    }
 }
 
 // #[derive(Debug, Clone, PartialEq)]
@@ -372,5 +396,32 @@ impl<X: Clone + PartialEq + Debug + 'static> View for Value<X> {
 impl<X> Hydrate for Value<X> {
     fn hydrate(&mut self, other: Self) {
         *self = other;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// TreeBuilder
+
+use ptree::{item::StringItem, print_tree, TreeBuilder};
+
+pub trait Tree {
+    fn mk_tree(&self, builder: &mut TreeBuilder);
+}
+
+impl Tree for () {
+    fn mk_tree(&self, _builder: &mut TreeBuilder) {}
+}
+
+impl<A: Tree, B: Tree> Tree for (A, B) {
+    fn mk_tree(&self, builder: &mut TreeBuilder) {
+        self.0.mk_tree(builder);
+        self.1.mk_tree(builder);
+    }
+}
+
+impl<X: View> Tree for ViewHierarchy<X> {
+    fn mk_tree(&self, builder: &mut TreeBuilder) {
+        let ViewHierarchy { view, children } = self;
+        View::mk_tree(view, children, builder)
     }
 }

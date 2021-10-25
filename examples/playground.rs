@@ -138,7 +138,8 @@ fn hydrate_test() {
     eprintln!("Building initial hierarchy:");
     let mut hierarchy = ViewHierarchy::new(App::new());
     eprintln!("\nHierarchy:");
-    dbg!(&hierarchy);
+    // dbg!(&hierarchy);
+    hierarchy.pretty_print();
 
     // hierarchy.view.state.0 = 1;
     {
@@ -159,7 +160,8 @@ fn hydrate_test() {
     eprintln!("\nHydrating:");
     hierarchy.perform_hydrate(App::new());
     eprintln!("\nHierarchy:");
-    dbg!(&hierarchy);
+    // dbg!(&hierarchy);
+    hierarchy.pretty_print();
 }
 
 // fn get_child_view(hierarchy: ViewHierarchy<X>) -> X::Children

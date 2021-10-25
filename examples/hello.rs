@@ -26,18 +26,13 @@ impl Hydrate for App {
 
 fn main() {
     let hierarchy = ViewHierarchy::new(App::new());
-    dbg!(hierarchy);
-    println!("Size: {:?}", size_of::<ViewHierarchy<App>>());
+    hierarchy.pretty_print();
+    println!("Size (bytes): {:?}", size_of::<ViewHierarchy<App>>());
 }
 
 /* Output:
 
-[examples/hello.rs:29] hierarchy = ViewHierarchy {
-    view: App,
-    children: ViewHierarchy {
-        view: (),
-        children: (),
-    },
-}
-Size: 0
+ViewHierarchy
+└─ App
+Size (bytes): 0
 */
