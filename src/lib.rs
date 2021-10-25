@@ -399,6 +399,31 @@ impl<X> Hydrate for Value<X> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Property view
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Property<P, X: View> {
+    pub property: P,
+    pub view: X,
+}
+
+impl<P: Clone + PartialEq + Debug + 'static, X: View> View for Property<P, X> {
+    type Children = X::Children;
+    type Body = X::Body;
+    fn body(&self) -> Self::Body {
+        self.view.body()
+    }
+
+    fn build_children(&self) -> Self::Children {
+        self.view.build_children()
+    }
+}
+
+impl<P, X: View> Hydrate for Property<P, X> {
+    fn hydrate(&mut self, _: Self) {}
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // TreeBuilder
 
 use ptree::{item::StringItem, print_tree, TreeBuilder};
