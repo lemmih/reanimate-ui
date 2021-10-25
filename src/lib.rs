@@ -1,3 +1,27 @@
+// ReanimateUI design:
+//
+// A user interface is a tree of views. This tree is completely static with
+// the exception of list views which can have N children. Note: the type
+// of those children is static.
+//
+// Views can contain:
+//   * read-only properties. These can contain data from the parent view.
+//     Example: the text of a Text view.
+//   * local state. The state is persistent even across changes to the read-only
+//     parameters.
+//   * environmental data. The data is set at an arbitrary point higher up the
+//     view hierarchy.
+//   * interpolated values. Similar to the read-only properties expect they
+//     smooth interpolate when changed.
+//
+// UI loop:
+// 1. Create new ViewHierarchy
+// 2. Layout ViewHierarchy
+// 3. Render ViewHierarchy
+// 4. If no state changes, go to step 3. Layout cannot change if there are no
+//    state changes.
+// 5. Update ViewHierarchy, go to step 2.
+
 #![feature(type_alias_impl_trait)]
 #![feature(associated_type_defaults)]
 // #![allow(dead_code)]
