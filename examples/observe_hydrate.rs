@@ -101,18 +101,36 @@ fn main() {
 Initial state:
 ViewHierarchy
 └─ App { root_state: State(0), root_ro: 1 }
-   └─ Level2 { view_state: State(0), view_prop: 1 }
-      └─ Value(1)
+   └─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 1 })
+      └─ ObserveHydrate(Value(1))
 
 Setting App.root_state = 10
+  Hydrating:
+    Old: Level2 { view_state: State(0), view_prop: 1 }
+    New: Level2 { view_state: State(0), view_prop: 11 }
+  Hydrating:
+    Old: Value(1)
+    New: Value(11)
 ViewHierarchy
 └─ App { root_state: State(10), root_ro: 1 }
-   └─ Level2 { view_state: State(0), view_prop: 11 }
-      └─ Value(11)
+   └─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 11 })
+      └─ ObserveHydrate(Value(11))
 
 Setting App.Level2.view_state = 100
+  Hydrating:
+    Old: Level2 { view_state: State(100), view_prop: 11 }
+    New: Level2 { view_state: State(0), view_prop: 11 }
+  Hydrating:
+    Old: Value(11)
+    New: Value(111)
 ViewHierarchy
 └─ App { root_state: State(10), root_ro: 1 }
-   └─ Level2 { view_state: State(100), view_prop: 11 }
-      └─ Value(111)
+   └─ ObserveHydrate(Level2 { view_state: State(100), view_prop: 11 })
+      └─ ObserveHydrate(Value(111))
+
+Setting App.Level2.view_state = 0
+ViewHierarchy
+└─ App { root_state: State(10), root_ro: 1 }
+   └─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 11 })
+      └─ ObserveHydrate(Value(111))
 */
