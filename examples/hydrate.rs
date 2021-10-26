@@ -20,7 +20,7 @@ impl App {
 impl View for App {
     type Body = impl View;
     fn body(&self) -> Self::Body {
-        Level2::new(self.root_ro + self.root_state.0)
+        Level2::new(self.root_ro + *self.root_state.borrow())
     }
 }
 
@@ -47,7 +47,7 @@ impl Level2 {
 impl View for Level2 {
     type Body = impl View;
     fn body(&self) -> Self::Body {
-        Value::new(self.view_state.0 + self.view_prop)
+        Value::new(*self.view_state.borrow() + self.view_prop)
     }
 }
 
@@ -65,13 +65,18 @@ fn main() {
     hierarchy.pretty_print();
 
     eprintln!("\nSetting App.root_state = 10");
-    hierarchy.view.root_state.0 = 10;
+    *hierarchy.view.root_state.borrow_mut() = 10;
     hierarchy.perform_hydrate(App::new());
     // dbg!(&hierarchy);
     hierarchy.pretty_print();
 
     eprintln!("\nSetting App.Level2.view_state = 100");
-    hierarchy.children.view.assume::<Level2>().view_state.0 = 100;
+    *hierarchy
+        .children
+        .view
+        .assume::<Level2>()
+        .view_state
+        .borrow_mut() = 100;
     hierarchy.perform_hydrate(App::new());
     // dbg!(&hierarchy);
     hierarchy.pretty_print();
@@ -87,13 +92,13 @@ ViewHierarchy
 
 Setting App.root_state = 10
 ViewHierarchy
-└─ App { root_state: State(10), root_ro: 1 }
+└─ App { root_state: StateDirty(10), root_ro: 1 }
    └─ Level2 { view_state: State(0), view_prop: 11 }
       └─ Value(11)
 
 Setting App.Level2.view_state = 100
 ViewHierarchy
-└─ App { root_state: State(10), root_ro: 1 }
-   └─ Level2 { view_state: State(100), view_prop: 11 }
+└─ App { root_state: StateDirty(10), root_ro: 1 }
+   └─ Level2 { view_state: StateDirty(100), view_prop: 11 }
       └─ Value(111)
 */

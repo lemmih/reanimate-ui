@@ -28,7 +28,9 @@
 
 use std::any::Any;
 use std::any::TypeId;
+use std::cell::{Cell, RefCell};
 use std::fmt::Debug;
+use std::rc::Rc;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Hydrate
@@ -36,6 +38,9 @@ use std::fmt::Debug;
 // Copy variables from 'new' into self. Don't override state variables.
 pub trait Hydrate {
     fn hydrate(&mut self, new: Self);
+    fn is_dirty(&self) -> bool {
+        false
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -111,12 +116,11 @@ impl<A: Hydrateable, B: Hydrateable> Hydrateable for (A, B) {
 impl<X: View> Hydrateable for ViewHierarchy<X> {
     fn perform_hydrate(&mut self, new: Self::Body) {
         let ViewHierarchy { view, children } = self;
-        if view == &new {
-            // && !view.is_dirty()
-            Hydrateable::perform_hydrate(children, children.clone_body());
-        } else {
+        if view.is_dirty() || view != &new {
             Hydrate::hydrate(view, new);
             Hydrateable::perform_hydrate(children, view.body());
+        } else {
+            Hydrateable::perform_hydrate(children, children.clone_body());
         }
     }
 }
@@ -348,17 +352,64 @@ impl<X: View> ViewHierarchy<X> {
 ////////////////////////////////////////////////////////////////////////////////
 // State
 
+#[derive(Clone, PartialEq)]
+pub struct State<X>(Rc<InnerState<X>>);
+
+impl<X: Debug> std::fmt::Debug for State<X> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = if self.0.dirty.get() {
+            "StateDirty"
+        } else {
+            "State"
+        };
+        f.debug_tuple(name).field(&self.0.value.borrow()).finish()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct State<X>(pub X);
+struct InnerState<X> {
+    dirty: Cell<bool>,
+    value: RefCell<X>,
+}
+impl<X> InnerState<X> {
+    fn new(value: X) -> Self {
+        InnerState {
+            dirty: Cell::new(false),
+            value: RefCell::new(value),
+        }
+    }
+
+    fn borrow(&self) -> std::cell::Ref<'_, X> {
+        self.value.borrow()
+    }
+
+    fn borrow_mut(&self) -> std::cell::RefMut<'_, X> {
+        self.dirty.set(true);
+        self.value.borrow_mut()
+    }
+}
 
 impl<X> State<X> {
     pub fn new(value: X) -> Self {
-        State(value)
+        State(Rc::new(InnerState::new(value)))
+    }
+
+    pub fn borrow(&self) -> std::cell::Ref<'_, X> {
+        self.0.borrow()
+    }
+
+    pub fn borrow_mut(&self) -> std::cell::RefMut<'_, X> {
+        self.0.borrow_mut()
     }
 }
 
 impl<X> Hydrate for State<X> {
-    fn hydrate(&mut self, _other: Self) {}
+    fn hydrate(&mut self, _other: Self) {
+        self.0.dirty.set(false);
+    }
+    fn is_dirty(&self) -> bool {
+        self.0.dirty.get()
+    }
 }
 
 // // Check if 'assume' is zero-cost.

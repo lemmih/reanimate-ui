@@ -23,7 +23,7 @@ use reanimate_ui::*;
 // ViewHierarchy<X> -> Vec<Layout>
 // Ask: LayoutPriority
 // Ask: LayoutFlex
-// Constraints -> Size
+// Constraint -> Size
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct App {
@@ -43,7 +43,7 @@ impl App {
     pub fn view(&self) -> impl View {
         eprintln!("Build body: App");
         (
-            StateLocalTest::new(10 * self.state.0),
+            StateLocalTest::new(10 * *self.state.borrow()),
             StateLocalTest::new(20),
         )
     }
@@ -143,13 +143,13 @@ fn hydrate_test() {
 
     // hierarchy.view.state.0 = 1;
     {
-        hierarchy.view.state.0 = 2;
+        *hierarchy.view.state.borrow_mut() = 2;
         let view = hierarchy
             .children
             .view
             .assume::<(StateLocalTest, StateLocalTest)>();
-        view.0.state.0 = 1;
-        view.1.state.0 = 2;
+        *view.0.state.borrow_mut() = 1;
+        *view.1.state.borrow_mut() = 2;
         // let view: &mut (StateLocalTest, StateLocalTest) = (&mut hierarchy.children.view
         //     as &mut dyn Any)
         //     .downcast_mut()

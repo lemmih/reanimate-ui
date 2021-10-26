@@ -20,13 +20,18 @@ impl App {
 impl View for App {
     type Body = impl View;
     fn body(&self) -> Self::Body {
-        Level2::new(self.root_ro + self.root_state.0).observe_hydrate()
+        Level2::new(self.root_ro + *self.root_state.borrow()).observe_hydrate()
     }
 }
 
 // This trait will be derived.
 impl Hydrate for App {
-    fn hydrate(&mut self, _: Self) {}
+    fn hydrate(&mut self, other: Self) {
+        self.root_ro = other.root_ro;
+    }
+    fn is_dirty(&self) -> bool {
+        self.root_state.is_dirty()
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -47,7 +52,7 @@ impl Level2 {
 impl View for Level2 {
     type Body = impl View;
     fn body(&self) -> Self::Body {
-        Value::new(self.view_state.0 + self.view_prop).observe_hydrate()
+        Value::new(*self.view_state.borrow() + self.view_prop).observe_hydrate()
     }
 }
 
@@ -55,6 +60,9 @@ impl View for Level2 {
 impl Hydrate for Level2 {
     fn hydrate(&mut self, other: Self) {
         self.view_prop = other.view_prop;
+    }
+    fn is_dirty(&self) -> bool {
+        self.view_state.is_dirty()
     }
 }
 
@@ -65,32 +73,32 @@ fn main() {
     hierarchy.pretty_print();
 
     eprintln!("\nSetting App.root_state = 10");
-    hierarchy.view.root_state.0 = 10;
+    *hierarchy.view.root_state.borrow_mut() = 10;
     hierarchy.perform_hydrate(App::new());
     // dbg!(&hierarchy);
     hierarchy.pretty_print();
 
     eprintln!("\nSetting App.Level2.view_state = 100");
-    hierarchy
+    *hierarchy
         .children
         .view
         .assume::<ObserveHydrate<Level2>>()
         .0
         .view_state
-        .0 = 100;
+        .borrow_mut() = 100;
     hierarchy.perform_hydrate(App::new());
     // dbg!(&hierarchy);
     hierarchy.pretty_print();
 
     // BUG! Views should be hydrated if they contain dirty state.
     eprintln!("\nSetting App.Level2.view_state = 0");
-    hierarchy
+    *hierarchy
         .children
         .view
         .assume::<ObserveHydrate<Level2>>()
         .0
         .view_state
-        .0 = 0;
+        .borrow_mut() = 0;
     hierarchy.perform_hydrate(App::new());
     // dbg!(&hierarchy);
     hierarchy.pretty_print();
@@ -112,25 +120,31 @@ Setting App.root_state = 10
     Old: Value(1)
     New: Value(11)
 ViewHierarchy
-└─ App { root_state: State(10), root_ro: 1 }
+└─ App { root_state: StateDirty(10), root_ro: 1 }
    └─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 11 })
       └─ ObserveHydrate(Value(11))
 
 Setting App.Level2.view_state = 100
   Hydrating:
-    Old: Level2 { view_state: State(100), view_prop: 11 }
+    Old: Level2 { view_state: StateDirty(100), view_prop: 11 }
     New: Level2 { view_state: State(0), view_prop: 11 }
   Hydrating:
     Old: Value(11)
     New: Value(111)
 ViewHierarchy
-└─ App { root_state: State(10), root_ro: 1 }
-   └─ ObserveHydrate(Level2 { view_state: State(100), view_prop: 11 })
+└─ App { root_state: StateDirty(10), root_ro: 1 }
+   └─ ObserveHydrate(Level2 { view_state: StateDirty(100), view_prop: 11 })
       └─ ObserveHydrate(Value(111))
 
 Setting App.Level2.view_state = 0
+  Hydrating:
+    Old: Level2 { view_state: StateDirty(0), view_prop: 11 }
+    New: Level2 { view_state: State(0), view_prop: 11 }
+  Hydrating:
+    Old: Value(111)
+    New: Value(11)
 ViewHierarchy
-└─ App { root_state: State(10), root_ro: 1 }
-   └─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 11 })
-      └─ ObserveHydrate(Value(111))
+└─ App { root_state: StateDirty(10), root_ro: 1 }
+   └─ ObserveHydrate(Level2 { view_state: StateDirty(0), view_prop: 11 })
+      └─ ObserveHydrate(Value(11))
 */
