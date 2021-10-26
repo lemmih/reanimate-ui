@@ -83,7 +83,7 @@ fn main() {
     hierarchy.pretty_print();
 
     // BUG! Views should be hydrated if they contain dirty state.
-    eprintln!("\nSetting App.Level2.view_state = 100");
+    eprintln!("\nSetting App.Level2.view_state = 0");
     hierarchy
         .children
         .view
