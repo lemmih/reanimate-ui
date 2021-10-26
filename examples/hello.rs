@@ -32,7 +32,6 @@ fn main() {
 
 /* Output:
 
-ViewHierarchy
-└─ App
+App
 Size (bytes): 0
 */

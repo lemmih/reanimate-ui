@@ -36,8 +36,7 @@ fn main() {
 
 /* Output:
 
-ViewHierarchy
-└─ App
-   └─ Property { property: "string", view: Value(10) }
+App
+└─ Property { property: "string", view: Value(10) }
 Size (bytes): 32
 */

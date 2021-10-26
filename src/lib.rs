@@ -310,8 +310,9 @@ impl<X: View> ViewHierarchy<X> {
     }
 
     pub fn tree(&self) -> StringItem {
-        let mut builder = TreeBuilder::new("ViewHierarchy".to_string());
-        Tree::mk_tree(self, &mut builder);
+        let ViewHierarchy { view, children } = self;
+        let mut builder = TreeBuilder::new(format!("{:?}", view));
+        Tree::mk_tree(children, &mut builder);
         builder.build()
     }
 

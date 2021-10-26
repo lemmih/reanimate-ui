@@ -51,8 +51,12 @@ impl App {
 
 // This trait will be derived.
 impl Hydrate for App {
-    fn hydrate(&mut self, _: Self) {
+    fn hydrate(&mut self, other: Self) {
         eprintln!("hydrate App");
+        self.state.hydrate(other.state);
+    }
+    fn is_dirty(&self) -> bool {
+        self.state.is_dirty()
     }
 }
 
@@ -108,8 +112,12 @@ impl StateLocalTest {
 
 impl Hydrate for StateLocalTest {
     fn hydrate(&mut self, other: Self) {
+        self.state.hydrate(other.state);
         eprintln!("hydrate StateLocalTest");
         self.derived = other.derived;
+    }
+    fn is_dirty(&self) -> bool {
+        self.state.is_dirty()
     }
 }
 impl View for StateLocalTest {

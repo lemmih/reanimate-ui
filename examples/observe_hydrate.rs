@@ -107,10 +107,9 @@ fn main() {
 /* Output:
 
 Initial state:
-ViewHierarchy
-└─ App { root_state: State(0), root_ro: 1 }
-   └─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 1 })
-      └─ ObserveHydrate(Value(1))
+App { root_state: State(0), root_ro: 1 }
+└─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 1 })
+   └─ ObserveHydrate(Value(1))
 
 Setting App.root_state = 10
   Hydrating:
@@ -119,10 +118,9 @@ Setting App.root_state = 10
   Hydrating:
     Old: Value(1)
     New: Value(11)
-ViewHierarchy
-└─ App { root_state: StateDirty(10), root_ro: 1 }
-   └─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 11 })
-      └─ ObserveHydrate(Value(11))
+App { root_state: StateDirty(10), root_ro: 1 }
+└─ ObserveHydrate(Level2 { view_state: State(0), view_prop: 11 })
+   └─ ObserveHydrate(Value(11))
 
 Setting App.Level2.view_state = 100
   Hydrating:
@@ -131,10 +129,9 @@ Setting App.Level2.view_state = 100
   Hydrating:
     Old: Value(11)
     New: Value(111)
-ViewHierarchy
-└─ App { root_state: StateDirty(10), root_ro: 1 }
-   └─ ObserveHydrate(Level2 { view_state: StateDirty(100), view_prop: 11 })
-      └─ ObserveHydrate(Value(111))
+App { root_state: StateDirty(10), root_ro: 1 }
+└─ ObserveHydrate(Level2 { view_state: StateDirty(100), view_prop: 11 })
+   └─ ObserveHydrate(Value(111))
 
 Setting App.Level2.view_state = 0
   Hydrating:
@@ -143,8 +140,7 @@ Setting App.Level2.view_state = 0
   Hydrating:
     Old: Value(111)
     New: Value(11)
-ViewHierarchy
-└─ App { root_state: StateDirty(10), root_ro: 1 }
-   └─ ObserveHydrate(Level2 { view_state: StateDirty(0), view_prop: 11 })
-      └─ ObserveHydrate(Value(11))
+App { root_state: StateDirty(10), root_ro: 1 }
+└─ ObserveHydrate(Level2 { view_state: StateDirty(0), view_prop: 11 })
+   └─ ObserveHydrate(Value(11))
 */

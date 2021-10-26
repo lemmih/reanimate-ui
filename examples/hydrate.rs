@@ -85,20 +85,17 @@ fn main() {
 /* Output:
 
 Initial state:
-ViewHierarchy
-└─ App { root_state: State(0), root_ro: 1 }
-   └─ Level2 { view_state: State(0), view_prop: 1 }
-      └─ Value(1)
+App { root_state: State(0), root_ro: 1 }
+└─ Level2 { view_state: State(0), view_prop: 1 }
+   └─ Value(1)
 
 Setting App.root_state = 10
-ViewHierarchy
-└─ App { root_state: StateDirty(10), root_ro: 1 }
-   └─ Level2 { view_state: State(0), view_prop: 11 }
-      └─ Value(11)
+App { root_state: StateDirty(10), root_ro: 1 }
+└─ Level2 { view_state: State(0), view_prop: 11 }
+   └─ Value(11)
 
 Setting App.Level2.view_state = 100
-ViewHierarchy
-└─ App { root_state: StateDirty(10), root_ro: 1 }
-   └─ Level2 { view_state: StateDirty(100), view_prop: 11 }
-      └─ Value(111)
+App { root_state: StateDirty(10), root_ro: 1 }
+└─ Level2 { view_state: StateDirty(100), view_prop: 11 }
+   └─ Value(111)
 */
