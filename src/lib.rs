@@ -78,9 +78,7 @@ pub trait HasBody {
 
 impl HasBody for () {
     type Body = ();
-    fn clone_body(&self) -> Self::Body {
-        ()
-    }
+    fn clone_body(&self) -> Self::Body {}
 }
 
 impl<A: HasBody, B: HasBody> HasBody for (A, B) {
@@ -174,7 +172,7 @@ where
     // Unpack 'impl View' into a specific type. Doesn't fail at compile-time but
     // no checking happens at run-time.
     // This function is only used during testing.
-    fn assume<X: 'static>(self: &mut Self) -> &mut X {
+    fn assume<X: 'static>(&mut self) -> &mut X {
         let self_dyn = self as &mut dyn Any;
         self_dyn.downcast_mut::<X>().expect("static type error")
     }
@@ -214,12 +212,8 @@ impl<A: View, B: View> Hydrate for (A, B) {
 impl View for () {
     type Body = ();
     type Children = ();
-    fn body(&self) -> Self::Body {
-        ()
-    }
-    fn build_children(&self) -> Self::Children {
-        ()
-    }
+    fn body(&self) -> Self::Body {}
+    fn build_children(&self) -> Self::Children {}
 }
 
 impl Hydrate for () {
@@ -245,9 +239,7 @@ impl Text {
 impl View for Text {
     type Body = ();
     type Children = ();
-    fn body(&self) -> Self::Body {
-        ()
-    }
+    fn body(&self) -> Self::Body {}
 }
 
 impl Hydrate for Text {
@@ -435,12 +427,8 @@ impl<X> Value<X> {
 impl<X: Clone + PartialEq + Debug + 'static> View for Value<X> {
     type Body = ();
     type Children = ();
-    fn body(&self) -> Self::Body {
-        ()
-    }
-    fn build_children(&self) -> Self::Children {
-        ()
-    }
+    fn body(&self) -> Self::Body {}
+    fn build_children(&self) -> Self::Children {}
 }
 
 // This impl will be derived.
