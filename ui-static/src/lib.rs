@@ -32,6 +32,8 @@ use std::cell::{Cell, RefCell};
 use std::fmt::Debug;
 use std::rc::Rc;
 
+pub mod dynamic;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Hydrate
 
