@@ -6,15 +6,26 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::ops::{Deref, DerefMut};
+// use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
 use ptree::{item::StringItem, print_tree, TreeBuilder};
 
-#[derive(Debug, Clone)]
+// mod smooth;
+
+#[derive(Debug, Clone, Copy)]
 pub struct Size {
     pub width: f64,
     pub height: f64,
+}
+
+impl Size {
+    pub fn zero() -> Size {
+        Size {
+            width: 0.0,
+            height: 0.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -48,6 +59,12 @@ impl Constraint {
 pub struct Offset {
     pub x: f64,
     pub y: f64,
+}
+
+impl Offset {
+    pub fn zero() -> Self {
+        Self { x: 0.0, y: 0.0 }
+    }
 }
 
 /*
@@ -93,10 +110,8 @@ pub trait View: AsAny + Debug + 'static {
         if let [ViewTree { view, children }] = children {
             view.borrow().layout(children, constraint)
         } else {
-            Size {
-                width: 0.0,
-                height: 0.0,
-            }
+            eprintln!("Can't decide widget size: {:?}", self);
+            Size::zero()
         }
     }
 
@@ -131,20 +146,14 @@ impl View for EmptyView {
 #[derive(Debug, Clone)]
 pub struct Text {
     text: String,
-    size: Size,
-    offset: Offset,
+    offset: Cell<Offset>,
 }
 
 impl Text {
     pub fn new(text: impl ToString) -> Text {
-        let str = text.to_string();
         Text {
             text: text.to_string(),
-            size: Size {
-                width: str.len() as f64,
-                height: 1.0,
-            },
-            offset: Offset { x: 0.0, y: 0.0 },
+            offset: Cell::new(Offset { x: 0.0, y: 0.0 }),
         }
     }
 }
@@ -155,6 +164,17 @@ impl View for Text {
     // }
     fn children(&self) -> Vec<AnyView> {
         Vec::new()
+    }
+
+    fn layout(&self, _children: &[ViewTree], _constraint: Constraint) -> Size {
+        Size {
+            width: self.text.len() as f64,
+            height: 1.0,
+        }
+    }
+
+    fn set_offset(&self, _children: &[ViewTree], offset: Offset) {
+        self.offset.set(offset)
     }
 }
 
@@ -198,15 +218,24 @@ impl View for Stack {
     }
 
     fn layout(&self, children: &[ViewTree], mut constraint: Constraint) -> Size {
+        let mut my_size = Size::zero();
         for child in children {
-            let size = child.layout(constraint);
+            child.layout(constraint);
+            let size = child.view.size.get();
             constraint.sub_height(size.height);
+            my_size.height += size.height;
+            if my_size.width < size.width {
+                my_size.width = size.width;
+            }
         }
-        // Naive layout algorithm.
-        // todo!()
-        Size {
-            width: 0.0,
-            height: 0.0,
+        my_size
+    }
+
+    fn set_offset(&self, children: &[ViewTree], mut offset: Offset) {
+        for ViewTree { view, children } in children {
+            let size = view.size.get();
+            view.borrow().set_offset(children, offset);
+            offset.y += size.height;
         }
     }
 }
@@ -349,8 +378,13 @@ impl ViewTree {
         (new, del, upd)
     }
 
-    pub fn layout(&self, constraint: Constraint) -> Size {
-        self.view.borrow().layout(&self.children, constraint)
+    pub fn layout(&self, constraint: Constraint) {
+        let size = self.view.borrow().layout(&self.children, constraint);
+        self.view.size.set(size);
+    }
+
+    pub fn set_offset(&self, offset: Offset) {
+        self.view.borrow().set_offset(&self.children, offset);
     }
 
     pub fn pretty_print(&self) {
@@ -381,6 +415,7 @@ impl ViewTree {
 #[derive(Clone)]
 pub struct AnyView {
     key: Key,
+    size: Rc<Cell<Size>>,
     view: Rc<RefCell<dyn View>>,
 }
 
@@ -388,6 +423,7 @@ impl std::fmt::Debug for AnyView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("AnyView")
             .field(&self.key)
+            .field(&self.size.get())
             .field(&self.view.borrow())
             .finish()
     }
@@ -398,6 +434,7 @@ impl AnyView {
     pub fn new(view: impl View) -> AnyView {
         AnyView {
             key: Key::new(),
+            size: Rc::new(Cell::new(Size::zero())),
             view: Rc::new(RefCell::new(view)),
         }
     }
@@ -506,9 +543,9 @@ impl<X: Copy> State<X> {
         self.dirty.set(true);
     }
 
-    fn clean(&self) {
-        self.dirty.set(false)
-    }
+    // fn clean(&self) {
+    //     self.dirty.set(false)
+    // }
 }
 
 /*

@@ -89,6 +89,7 @@ fn layout_test() {
         min_height: 0.0,
         max_height: 100.0,
     });
+    tree.set_offset(Offset::zero());
     tree.pretty_print();
 }
 
