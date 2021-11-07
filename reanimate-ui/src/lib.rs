@@ -89,6 +89,18 @@ impl Key {
 
 pub type Store = HashMap<Key, ViewTree>;
 
+pub enum Event {
+    MousePress(MouseButton, f64, f64),
+}
+
+pub enum MouseButton {
+    Left,
+    Right,
+    Middle,
+    WheelUp,
+    WheelDown,
+}
+
 pub trait View: AsAny + Debug + 'static {
     fn body(&self) -> AnyView {
         // AnyView(Box::new(EmptyView))
@@ -104,13 +116,16 @@ pub trait View: AsAny + Debug + 'static {
         vec![self.body()]
     }
 
+    fn event(&self, _size: Size, _children: &[ViewTree], _event: &Event) {}
+
     fn hydrate_single(&mut self, _other: AnyView) {}
 
     fn layout(&self, children: &[ViewTree], constraint: Constraint) -> Size {
-        if let [ViewTree { view, children }] = children {
-            view.borrow().layout(children, constraint)
+        if let [child] = children {
+            child.layout(constraint);
+            child.view.size.get()
         } else {
-            eprintln!("Can't decide widget size: {:?}", self);
+            // eprintln!("Can't decide widget size: {:?}", self);
             Size::zero()
         }
     }
@@ -119,6 +134,16 @@ pub trait View: AsAny + Debug + 'static {
         for ViewTree { view, children } in children {
             view.borrow().set_offset(children, offset)
         }
+    }
+
+    fn is_dirty(&self) -> bool {
+        true
+    }
+
+    fn clean(&self) {}
+
+    fn is_same(&self, _other: &AnyView) -> bool {
+        false
     }
 }
 
@@ -248,6 +273,7 @@ pub trait Hydrate {
     fn hydrate(&mut self, other: Self);
 }
 
+#[derive(Clone)]
 pub struct ViewTree {
     pub view: AnyView,
     pub children: Vec<ViewTree>,
@@ -300,21 +326,47 @@ impl ViewTree {
     Drop C
     Generate new children for [B,D]
     */
+    pub fn perform_hydrate_dirty(&mut self) {
+        let ViewTree { view, children } = self;
+        if view.borrow().is_dirty() {
+            // eprintln!("Hydrating dirty: {:?}", view);
+            let new_children = view.borrow().children();
+            let prev_children = std::mem::replace(children, Vec::new());
+            let (new, _del, upd) = ViewTree::diff(new_children, prev_children);
+            for elt in new.into_iter() {
+                children.push(ViewTree::new(elt));
+            }
+            for (new_root, mut old_tree) in upd.into_iter() {
+                old_tree.perform_hydrate(new_root);
+                children.push(old_tree);
+            }
+            children.sort_unstable_by_key(|tree| tree.view.key);
+        }
+    }
+
     pub fn perform_hydrate(&mut self, root: AnyView) {
         let ViewTree { view, children } = self;
         // eprintln!("Hydrating: {:?}", view);
-        view.hydrate_any(root);
-        let new_children = view.borrow().children();
-        let prev_children = std::mem::replace(children, Vec::new());
-        let (new, _del, upd) = ViewTree::diff(new_children, prev_children);
-        for elt in new.into_iter() {
-            children.push(ViewTree::new(elt));
+        if !view.borrow().is_dirty() && view.borrow().is_same(&root) {
+            // eprintln!("Hydrating clean: {:?} {:?}", view, root);
+            for child in children.iter_mut() {
+                child.perform_hydrate_dirty();
+            }
+        } else {
+            // eprintln!("Hydrating modified: {:?} {:?}", view, root);
+            view.hydrate_any(root);
+            let new_children = view.borrow().children();
+            let prev_children = std::mem::replace(children, Vec::new());
+            let (new, _del, upd) = ViewTree::diff(new_children, prev_children);
+            for elt in new.into_iter() {
+                children.push(ViewTree::new(elt));
+            }
+            for (new_root, mut old_tree) in upd.into_iter() {
+                old_tree.perform_hydrate(new_root);
+                children.push(old_tree);
+            }
+            children.sort_unstable_by_key(|tree| tree.view.key);
         }
-        for (new_root, mut old_tree) in upd.into_iter() {
-            old_tree.perform_hydrate(new_root);
-            children.push(old_tree);
-        }
-        children.sort_unstable_by_key(|tree| tree.view.key);
         // Diff:
         //   New: [AnyView]
         //   Del: [ViewTree]
@@ -410,12 +462,40 @@ impl ViewTree {
             builder.end_child();
         }
     }
+
+    pub fn flatten(&self) -> Vec<AnyView> {
+        let mut out = Vec::new();
+        fn process(out: &mut Vec<AnyView>, tree: &ViewTree) {
+            out.push(tree.view.clone());
+            for child in tree.children.iter() {
+                process(out, &child);
+            }
+        }
+        process(&mut out, self);
+        out
+    }
+
+    pub fn event(&self, event: &Event) {
+        self.view
+            .borrow()
+            .event(self.view.size.get(), &self.children, event);
+        for child in self.children.iter() {
+            child.event(event);
+        }
+    }
+
+    pub fn clean(&self) {
+        self.view.borrow().clean();
+        for child in self.children.iter() {
+            child.clean();
+        }
+    }
 }
 
 #[derive(Clone)]
 pub struct AnyView {
     key: Key,
-    size: Rc<Cell<Size>>,
+    pub size: Rc<Cell<Size>>,
     view: Rc<RefCell<dyn View>>,
 }
 
@@ -439,8 +519,9 @@ impl AnyView {
         }
     }
 
+    #[track_caller]
     pub fn downcast_ref<'a, T: View>(&'a self) -> Option<std::cell::Ref<'a, T>> {
-        let ref_view = self.view.borrow();
+        let ref_view = self.view.try_borrow().ok()?;
         <dyn Any>::downcast_ref::<T>((*ref_view).as_any())?;
         let m = std::cell::Ref::map(ref_view, |val| {
             <dyn Any>::downcast_ref::<T>(val.as_any()).unwrap()
@@ -509,10 +590,10 @@ pub trait ToAnyView: View + Sized {
 }
 impl<X: View + Sized> ToAnyView for X {}
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct State<X: Copy> {
-    dirty: Cell<bool>,
-    value: Cell<X>,
+    dirty: Rc<Cell<bool>>,
+    value: Rc<Cell<X>>,
 }
 
 impl<X: Debug + Copy> std::fmt::Debug for State<X> {
@@ -529,8 +610,8 @@ impl<X: Debug + Copy> std::fmt::Debug for State<X> {
 impl<X: Copy> State<X> {
     pub fn new(value: X) -> State<X> {
         State {
-            dirty: Cell::new(true),
-            value: Cell::new(value),
+            dirty: Rc::new(Cell::new(true)),
+            value: Rc::new(Cell::new(value)),
         }
     }
 
@@ -543,9 +624,13 @@ impl<X: Copy> State<X> {
         self.dirty.set(true);
     }
 
-    // fn clean(&self) {
-    //     self.dirty.set(false)
-    // }
+    pub fn clean(&self) {
+        self.dirty.set(false)
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.dirty.get()
+    }
 }
 
 /*

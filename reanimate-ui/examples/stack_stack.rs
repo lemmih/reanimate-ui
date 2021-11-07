@@ -25,7 +25,7 @@ fn main() {
 }
 
 fn layout_test() {
-    let mut tree = ViewTree::new(App.any_view());
+    let tree = ViewTree::new(App.any_view());
     tree.layout(Constraint {
         min_width: 0.0,
         max_width: 100.0,

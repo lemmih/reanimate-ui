@@ -78,11 +78,12 @@ impl View for Level3 {
 }
 
 fn main() {
-    layout_test()
+    // _layout_test()
+    _hydrate_test()
 }
 
-fn layout_test() {
-    let mut tree = ViewTree::new(App.any_view());
+fn _layout_test() {
+    let tree = ViewTree::new(App.any_view());
     tree.layout(Constraint {
         min_width: 0.0,
         max_width: 100.0,
@@ -93,7 +94,7 @@ fn layout_test() {
     tree.pretty_print();
 }
 
-fn hydrate_test() {
+fn _hydrate_test() {
     let mut tree = ViewTree::new(App.any_view());
     tree.pretty_print();
 
