@@ -101,7 +101,7 @@ pub enum MouseButton {
     WheelDown,
 }
 
-pub trait View: AsAny + Debug + 'static {
+pub trait View: Hydrate + AsAny + Debug + 'static {
     fn body(&self) -> AnyView {
         // AnyView(Box::new(EmptyView))
         AnyView::new(EmptyView)
@@ -118,13 +118,6 @@ pub trait View: AsAny + Debug + 'static {
 
     fn event(&self, _size: Size, _children: &[ViewTree], _event: &Event) {}
 
-    // fn hydrate_single(&mut self, _other: AnyView) {}
-    fn hydrate_pair(&mut self, _other: &Self)
-    where
-        Self: Sized,
-    {
-    }
-
     fn layout(&self, children: &[ViewTree], constraint: Constraint) -> Size {
         if let [child] = children {
             child.layout(constraint);
@@ -139,16 +132,6 @@ pub trait View: AsAny + Debug + 'static {
         for ViewTree { view, children } in children {
             view.borrow().set_offset(children, offset)
         }
-    }
-
-    fn is_dirty(&self) -> bool {
-        true
-    }
-
-    fn clean(&self) {}
-
-    fn is_same(&self, _other: &AnyView) -> bool {
-        false
     }
 }
 
@@ -166,7 +149,7 @@ impl<T: 'static> AsAny for T {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EmptyView;
 impl View for EmptyView {
     // fn children(&self) -> ChildIter {
@@ -176,11 +159,18 @@ impl View for EmptyView {
         Vec::new()
     }
 }
+impl Hydrate for EmptyView {}
 
 #[derive(Debug, Clone)]
 pub struct Text {
     text: String,
     offset: Cell<Offset>,
+}
+
+impl Hydrate for Text {
+    fn hydrate(&mut self, other: &Self) {
+        self.text = other.text.clone();
+    }
 }
 
 impl Text {
@@ -217,6 +207,11 @@ pub struct Stack {
     // key: Key,
     pub children: Vec<AnyView>,
 }
+impl Hydrate for Stack {
+    fn hydrate(&mut self, other: &Self) {
+        self.children = other.children.clone();
+    }
+}
 
 impl Stack {
     #[track_caller]
@@ -242,10 +237,6 @@ impl Stack {
 impl View for Stack {
     fn children(&self) -> Vec<AnyView> {
         self.children.clone()
-    }
-
-    fn hydrate_pair(&mut self, other: &Self) {
-        self.children = other.children.clone();
     }
 
     fn layout(&self, children: &[ViewTree], mut constraint: Constraint) -> Size {
@@ -276,7 +267,23 @@ impl View for Stack {
 // }
 
 pub trait Hydrate {
-    fn hydrate(&mut self, other: Self);
+    fn hydrate(&mut self, _other: &Self)
+    where
+        Self: Sized,
+    {
+    }
+    fn is_same(&self, _other: &Self) -> bool
+    where
+        Self: Sized,
+    {
+        false
+    }
+
+    fn is_dirty(&self) -> bool {
+        true
+    }
+
+    fn clean(&self) {}
 }
 
 #[derive(Clone)]
@@ -346,7 +353,7 @@ impl ViewTree {
     pub fn perform_hydrate(&mut self, root: AnyView) {
         let ViewTree { view, children } = self;
         // eprintln!("Hydrating: {:?}", view);
-        if !view.borrow().is_dirty() && view.borrow().is_same(&root) {
+        if !view.borrow().is_dirty() && view.is_same.clone()(view, &root) {
             // eprintln!("Hydrating clean: {:?} {:?}", view, root);
             for child in children.iter_mut() {
                 child.perform_hydrate_dirty();
@@ -497,6 +504,7 @@ pub struct AnyView {
     pub size: Rc<Cell<Size>>,
     view: Rc<RefCell<dyn View>>,
     hydrate: Rc<dyn Fn(&AnyView, &AnyView)>,
+    is_same: Rc<dyn Fn(&AnyView, &AnyView) -> bool>,
 }
 
 impl std::fmt::Debug for AnyView {
@@ -518,9 +526,20 @@ impl AnyView {
             view: Rc::new(RefCell::new(view)),
             hydrate: Rc::new(|a, b| {
                 if let Some(mut a) = a.downcast_mut::<V>() {
-                    if let Some(b) = b.downcast_mut::<V>() {
-                        a.hydrate_pair(&b)
+                    if let Some(b) = b.downcast_ref::<V>() {
+                        a.hydrate(&b)
                     }
+                }
+            }),
+            is_same: Rc::new(|a, b| {
+                if let Some(a) = a.downcast_ref::<V>() {
+                    if let Some(b) = b.downcast_ref::<V>() {
+                        a.is_same(&b)
+                    } else {
+                        false
+                    }
+                } else {
+                    false
                 }
             }),
         }

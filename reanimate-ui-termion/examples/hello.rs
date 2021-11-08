@@ -6,6 +6,20 @@ struct App {
     pub padding: State<u32>,
 }
 
+impl Hydrate for App {
+    fn hydrate(&mut self, _other: &Self) {}
+    fn is_same(&self, other: &Self) -> bool {
+        self.eq(&other)
+    }
+    fn is_dirty(&self) -> bool {
+        self.padding.is_dirty()
+    }
+
+    fn clean(&self) {
+        self.padding.clean()
+    }
+}
+
 impl App {
     fn new() -> Self {
         App {
@@ -30,31 +44,15 @@ impl View for App {
         stack.push(Stats::new());
         stack.any_view()
     }
-
-    fn is_same(&self, other: &AnyView) -> bool {
-        if let Some(other) = other.downcast_ref::<Self>() {
-            self.eq(&other)
-        } else {
-            false
-        }
-    }
-
-    fn is_dirty(&self) -> bool {
-        self.padding.is_dirty()
-    }
-
-    fn clean(&self) {
-        self.padding.clean()
-    }
-
-    // fn event(&self, _children: &[ViewTree], _event: &reanimate_ui::Event) {
-    //     self.clicks.set(self.clicks.get() + 1);
-    // }
 }
 
 #[derive(Debug, Clone)]
 struct CountClicks {
     pub clicks: State<u32>,
+}
+
+impl Hydrate for CountClicks {
+    fn hydrate(&mut self, _other: &Self) {}
 }
 
 impl CountClicks {

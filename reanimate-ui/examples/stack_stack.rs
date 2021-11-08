@@ -3,6 +3,8 @@ use reanimate_ui::*;
 #[derive(Debug)]
 struct App;
 
+impl Hydrate for App {}
+
 impl View for App {
     fn body(&self) -> AnyView {
         let mut stack = Stack::new();

@@ -34,6 +34,12 @@ impl TermText {
     }
 }
 
+impl Hydrate for TermText {
+    fn hydrate(&mut self, other: &Self) {
+        self.text = other.text.clone();
+    }
+}
+
 impl View for TermText {
     // fn children(&self) -> ChildIter {
     //     Box::new(std::iter::empty())
@@ -52,10 +58,6 @@ impl View for TermText {
     fn set_offset(&self, _children: &[ViewTree], offset: Offset) {
         self.offset.set(offset)
     }
-
-    fn hydrate_pair(&mut self, other: &Self) {
-        self.text = other.text.clone();
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -71,18 +73,20 @@ impl Stats {
     }
 }
 
+impl Hydrate for Stats {
+    fn hydrate(&mut self, _other: &Self) {}
+    fn is_same(&self, _other: &Self) -> bool {
+        true
+    }
+    fn is_dirty(&self) -> bool {
+        false
+    }
+}
+
 impl View for Stats {
     fn body(&self) -> AnyView {
         self.body.set(self.body.get() + 1);
         TermText::new(format!("Body {}", self.body.get())).any_view()
-    }
-
-    fn is_dirty(&self) -> bool {
-        false
-    }
-
-    fn is_same(&self, _other: &AnyView) -> bool {
-        true
     }
 }
 
@@ -112,6 +116,13 @@ impl<T: View> OnClick<T> {
             child,
             offset: Cell::new(Offset::zero()),
         }
+    }
+}
+
+impl<T: View + Clone> Hydrate for OnClick<T> {
+    fn hydrate(&mut self, other: &Self) {
+        self.cb = other.cb.clone();
+        self.child = other.child.clone();
     }
 }
 
@@ -156,10 +167,6 @@ impl<T: View + Clone> View for OnClick<T> {
             }
         }
     }
-    fn hydrate_pair(&mut self, other: &Self) {
-        self.cb = other.cb.clone();
-        self.child = other.child.clone();
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -182,12 +189,15 @@ impl<T: View> Box<T> {
     pub fn render(_screen: impl std::io::Write) {}
 }
 
+impl<T: View + Clone> Hydrate for Box<T> {
+    fn hydrate(&mut self, other: &Self) {
+        self.child = other.child.clone();
+    }
+}
+
 impl<T: View + Clone> View for Box<T> {
     fn body(&self) -> AnyView {
         self.child.clone().any_view()
-    }
-    fn hydrate_pair(&mut self, other: &Self) {
-        self.child = other.child.clone();
     }
     fn layout(&self, children: &[ViewTree], mut constraint: Constraint) -> Size {
         if let [child] = children {
@@ -237,13 +247,16 @@ impl Padding {
     pub fn render(_screen: impl std::io::Write) {}
 }
 
+impl Hydrate for Padding {
+    fn hydrate(&mut self, other: &Self) {
+        self.padding = other.padding;
+        self.child = other.child.clone();
+    }
+}
+
 impl View for Padding {
     fn body(&self) -> AnyView {
         self.child.clone()
-    }
-    fn hydrate_pair(&mut self, other: &Self) {
-        self.padding = other.padding;
-        self.child = other.child.clone();
     }
     fn layout(&self, children: &[ViewTree], mut constraint: Constraint) -> Size {
         if let [child] = children {

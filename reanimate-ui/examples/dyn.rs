@@ -3,6 +3,10 @@ use reanimate_ui::*;
 #[derive(Debug)]
 struct App;
 
+impl Hydrate for App {
+    fn hydrate(&mut self, _other: &Self) {}
+}
+
 impl View for App {
     fn body(&self) -> AnyView {
         // let mut stack = Stack::new();
@@ -33,6 +37,12 @@ impl Level2 {
     }
 }
 
+impl Hydrate for Level2 {
+    fn hydrate(&mut self, other: &Self) {
+        self.property = other.property;
+    }
+}
+
 impl View for Level2 {
     fn body(&self) -> AnyView {
         let mut stack = Stack::new();
@@ -42,9 +52,6 @@ impl View for Level2 {
             stack.push(Level3::new(3));
         }
         stack.any_view()
-    }
-    fn hydrate_pair(&mut self, other: &Self) {
-        self.property = other.property;
     }
 }
 
@@ -63,12 +70,15 @@ impl Level3 {
     }
 }
 
+impl Hydrate for Level3 {
+    fn hydrate(&mut self, other: &Self) {
+        self.prop = other.prop;
+    }
+}
+
 impl View for Level3 {
     fn body(&self) -> AnyView {
         Text::new("level 3").any_view()
-    }
-    fn hydrate_pair(&mut self, other: &Self) {
-        self.prop = other.prop;
     }
 }
 
