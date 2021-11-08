@@ -293,8 +293,8 @@ impl Mode {
 
 pub fn run(app: impl View + Clone) -> std::io::Result<()> {
     let stdin = stdin();
-    // let mut screen = MouseTerminal::from(AlternateScreen::from(stdout().into_raw_mode()?));
-    let mut screen = MouseTerminal::from(stdout().into_raw_mode()?);
+    let mut screen = MouseTerminal::from(AlternateScreen::from(stdout().into_raw_mode()?));
+    // let mut screen = MouseTerminal::from(stdout().into_raw_mode()?);
     let mut mode = Mode::UI;
     write!(
         screen,
