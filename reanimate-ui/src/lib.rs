@@ -331,16 +331,9 @@ impl ViewTree {
         if view.borrow().is_dirty() {
             // eprintln!("Hydrating dirty: {:?}", view);
             let new_children = view.borrow().children();
-            let prev_children = std::mem::replace(children, Vec::new());
-            let (new, _del, upd) = ViewTree::diff(new_children, prev_children);
-            for elt in new.into_iter() {
-                children.push(ViewTree::new(elt));
-            }
-            for (new_root, mut old_tree) in upd.into_iter() {
+            for (new_root, old_tree) in new_children.into_iter().zip(children.iter_mut()) {
                 old_tree.perform_hydrate(new_root);
-                children.push(old_tree);
             }
-            children.sort_unstable_by_key(|tree| tree.view.key);
         }
     }
 
