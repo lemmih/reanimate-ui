@@ -53,10 +53,8 @@ impl View for TermText {
         self.offset.set(offset)
     }
 
-    fn hydrate_single(&mut self, other: AnyView) {
-        if let Some(other) = other.downcast_ref::<TermText>() {
-            self.text = other.text.clone();
-        }
+    fn hydrate_pair(&mut self, other: &Self) {
+        self.text = other.text.clone();
     }
 }
 
@@ -158,11 +156,9 @@ impl<T: View + Clone> View for OnClick<T> {
             }
         }
     }
-    fn hydrate_single(&mut self, other: AnyView) {
-        if let Some(other) = other.downcast_ref::<Self>() {
-            self.cb = other.cb.clone();
-            self.child = other.child.clone();
-        }
+    fn hydrate_pair(&mut self, other: &Self) {
+        self.cb = other.cb.clone();
+        self.child = other.child.clone();
     }
 }
 
@@ -190,10 +186,8 @@ impl<T: View + Clone> View for Box<T> {
     fn body(&self) -> AnyView {
         self.child.clone().any_view()
     }
-    fn hydrate_single(&mut self, other: AnyView) {
-        if let Some(other) = other.downcast_ref::<Self>() {
-            self.child = other.child.clone();
-        }
+    fn hydrate_pair(&mut self, other: &Self) {
+        self.child = other.child.clone();
     }
     fn layout(&self, children: &[ViewTree], mut constraint: Constraint) -> Size {
         if let [child] = children {
@@ -247,11 +241,9 @@ impl View for Padding {
     fn body(&self) -> AnyView {
         self.child.clone()
     }
-    fn hydrate_single(&mut self, other: AnyView) {
-        if let Some(other) = other.downcast_ref::<Self>() {
-            self.padding = other.padding;
-            self.child = other.child.clone();
-        }
+    fn hydrate_pair(&mut self, other: &Self) {
+        self.padding = other.padding;
+        self.child = other.child.clone();
     }
     fn layout(&self, children: &[ViewTree], mut constraint: Constraint) -> Size {
         if let [child] = children {

@@ -43,11 +43,8 @@ impl View for Level2 {
         }
         stack.any_view()
     }
-    fn hydrate_single(&mut self, other: AnyView) {
-        if let Some(other) = other.downcast_ref::<Level2>() {
-            // self.state.hydrate(&other.state);
-            self.property = other.property;
-        }
+    fn hydrate_pair(&mut self, other: &Self) {
+        self.property = other.property;
     }
 }
 
@@ -70,10 +67,8 @@ impl View for Level3 {
     fn body(&self) -> AnyView {
         Text::new("level 3").any_view()
     }
-    fn hydrate_single(&mut self, other: AnyView) {
-        if let Some(other) = other.downcast_ref::<Level3>() {
-            self.prop = other.prop;
-        }
+    fn hydrate_pair(&mut self, other: &Self) {
+        self.prop = other.prop;
     }
 }
 

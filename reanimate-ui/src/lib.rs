@@ -118,7 +118,12 @@ pub trait View: AsAny + Debug + 'static {
 
     fn event(&self, _size: Size, _children: &[ViewTree], _event: &Event) {}
 
-    fn hydrate_single(&mut self, _other: AnyView) {}
+    // fn hydrate_single(&mut self, _other: AnyView) {}
+    fn hydrate_pair(&mut self, _other: &Self)
+    where
+        Self: Sized,
+    {
+    }
 
     fn layout(&self, children: &[ViewTree], constraint: Constraint) -> Size {
         if let [child] = children {
@@ -149,10 +154,14 @@ pub trait View: AsAny + Debug + 'static {
 
 pub trait AsAny {
     fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 impl<T: 'static> AsAny for T {
     fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 }
@@ -235,11 +244,8 @@ impl View for Stack {
         self.children.clone()
     }
 
-    fn hydrate_single(&mut self, other: AnyView) {
-        if let Some(other) = other.downcast_ref::<Stack>() {
-            // self.state.hydrate(&other.state);
-            self.children = other.children.clone();
-        }
+    fn hydrate_pair(&mut self, other: &Self) {
+        self.children = other.children.clone();
     }
 
     fn layout(&self, children: &[ViewTree], mut constraint: Constraint) -> Size {
@@ -490,6 +496,7 @@ pub struct AnyView {
     key: Key,
     pub size: Rc<Cell<Size>>,
     view: Rc<RefCell<dyn View>>,
+    hydrate: Rc<dyn Fn(&AnyView, &AnyView)>,
 }
 
 impl std::fmt::Debug for AnyView {
@@ -504,11 +511,18 @@ impl std::fmt::Debug for AnyView {
 
 impl AnyView {
     #[track_caller]
-    pub fn new(view: impl View) -> AnyView {
+    pub fn new<V: View>(view: V) -> AnyView {
         AnyView {
             key: Key::new(),
             size: Rc::new(Cell::new(Size::zero())),
             view: Rc::new(RefCell::new(view)),
+            hydrate: Rc::new(|a, b| {
+                if let Some(mut a) = a.downcast_mut::<V>() {
+                    if let Some(b) = b.downcast_mut::<V>() {
+                        a.hydrate_pair(&b)
+                    }
+                }
+            }),
         }
     }
 
@@ -522,12 +536,24 @@ impl AnyView {
         Some(m)
     }
 
+    #[track_caller]
+    pub fn downcast_mut<'a, T: View>(&'a self) -> Option<std::cell::RefMut<'a, T>> {
+        let ref_view = self.view.try_borrow_mut().ok()?;
+        <dyn Any>::downcast_ref::<T>((*ref_view).as_any())?;
+        let m = std::cell::RefMut::map(ref_view, |val| {
+            <dyn Any>::downcast_mut::<T>(val.as_any_mut()).unwrap()
+        });
+        Some(m)
+    }
+
     pub fn borrow(&self) -> std::cell::Ref<'_, dyn View> {
         self.view.borrow()
     }
 
     pub fn hydrate_any(&self, other: AnyView) {
-        self.view.borrow_mut().hydrate_single(other);
+        let cb = self.hydrate.clone();
+        cb(self, &other);
+        // self.view.borrow_mut().hydrate_single(other);
     }
 }
 
