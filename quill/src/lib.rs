@@ -35,6 +35,13 @@ impl Key {
     }
 }
 
+impl Default for Key {
+    #[track_caller]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub type Store = HashMap<Key, ViewTree>;
 
 pub enum Event {
@@ -60,7 +67,7 @@ pub trait View: Hydrate + AsAny + Debug + 'static {
         panic!("Missing key!");
     }
     #[track_caller]
-    fn children<'a>(self: &'a Self) -> Vec<AnyView> {
+    fn children(&self) -> Vec<AnyView> {
         vec![self.body()]
     }
 
@@ -148,9 +155,17 @@ impl View for Text {
 pub struct Stack {
     pub children: Vec<AnyView>,
 }
+
 impl Hydrate for Stack {
     fn hydrate(&mut self, other: &Self) {
         self.children = other.children.clone();
+    }
+}
+
+impl Default for Stack {
+    #[track_caller]
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -264,7 +279,7 @@ impl ViewTree {
             // eprintln!("Hydrating modified: {:?} {:?}", view, root);
             view.hydrate_any(root);
             let new_children = view.borrow().children();
-            let prev_children = std::mem::replace(children, Vec::new());
+            let prev_children = std::mem::take(children);
             let (new, _del, upd) = ViewTree::diff(new_children, prev_children);
             for elt in new.into_iter() {
                 children.push(ViewTree::new(elt));
@@ -376,7 +391,7 @@ impl ViewTree {
         fn process(out: &mut Vec<AnyView>, tree: &ViewTree) {
             out.push(tree.view.clone());
             for child in tree.children.iter() {
-                process(out, &child);
+                process(out, child);
             }
         }
         process(&mut out, self);
@@ -448,7 +463,7 @@ impl AnyView {
     }
 
     #[track_caller]
-    pub fn downcast_ref<'a, T: View>(&'a self) -> Option<std::cell::Ref<'a, T>> {
+    pub fn downcast_ref<T: View>(&self) -> Option<std::cell::Ref<'_, T>> {
         let ref_view = self.view.try_borrow().ok()?;
         <dyn Any>::downcast_ref::<T>((*ref_view).as_any())?;
         let m = std::cell::Ref::map(ref_view, |val| {
@@ -458,7 +473,7 @@ impl AnyView {
     }
 
     #[track_caller]
-    pub fn downcast_mut<'a, T: View>(&'a self) -> Option<std::cell::RefMut<'a, T>> {
+    pub fn downcast_mut<T: View>(&self) -> Option<std::cell::RefMut<'_, T>> {
         let ref_view = self.view.try_borrow_mut().ok()?;
         <dyn Any>::downcast_ref::<T>((*ref_view).as_any())?;
         let m = std::cell::RefMut::map(ref_view, |val| {

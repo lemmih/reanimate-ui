@@ -73,6 +73,13 @@ impl Stats {
     }
 }
 
+impl Default for Stats {
+    #[track_caller]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Hydrate for Stats {
     fn hydrate(&mut self, _other: &Self) {}
     fn is_same(&self, _other: &Self) -> bool {
