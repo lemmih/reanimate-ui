@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
-    "reanimate-ui",
-    "reanimate-ui-termion",
+    "quill-core",
+    "quill",
+    "quill-termion",
 ]

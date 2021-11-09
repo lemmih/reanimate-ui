@@ -1,4 +1,4 @@
-use reanimate_ui::*;
+use quill::*;
 
 #[derive(Debug)]
 struct App;

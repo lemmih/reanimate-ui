@@ -1,4 +1,4 @@
-use reanimate_ui::*;
+use quill::*;
 use std::cell::Cell;
 use std::io::{stdin, stdout, Write};
 use std::rc::Rc;
@@ -347,7 +347,7 @@ pub fn run(app: impl View + Clone) -> std::io::Result<()> {
                 // Event::Key(Key::Char('2')) => write!(screen, "{}", ToAlternateScreen)?,
                 termion::event::Event::Mouse(mouse_event) => match mouse_event {
                     termion::event::MouseEvent::Press(_btn, x, y) => tree.event(
-                        &reanimate_ui::Event::MousePress(MouseButton::Left, x as f64, y as f64),
+                        &quill::Event::MousePress(MouseButton::Left, x as f64, y as f64),
                     ),
                     _ => {}
                 },

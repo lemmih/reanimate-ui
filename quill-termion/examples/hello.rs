@@ -1,5 +1,5 @@
-use reanimate_ui::*;
-use reanimate_ui_termion::*;
+use quill::*;
+use quill_termion::*;
 
 #[derive(Debug, Clone, PartialEq)]
 struct App {
@@ -75,7 +75,7 @@ impl View for CountClicks {
 }
 
 fn main() -> std::io::Result<()> {
-    reanimate_ui_termion::run(App::new())?;
+    quill_termion::run(App::new())?;
     Ok(())
     // let stdin = stdin();
     // // let mut screen = MouseTerminal::from(AlternateScreen::from(stdout().into_raw_mode()?));

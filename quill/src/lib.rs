@@ -11,61 +11,9 @@ use std::rc::Rc;
 
 use ptree::{item::StringItem, print_tree, TreeBuilder};
 
+pub use quill_core::*;
+
 // mod smooth;
-
-#[derive(Debug, Clone, Copy)]
-pub struct Size {
-    pub width: f64,
-    pub height: f64,
-}
-
-impl Size {
-    pub fn zero() -> Size {
-        Size {
-            width: 0.0,
-            height: 0.0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Constraint {
-    pub min_width: f64,
-    pub max_width: f64,
-    pub min_height: f64,
-    pub max_height: f64,
-}
-
-impl Constraint {
-    pub fn new(width: f64, height: f64) -> Self {
-        Constraint {
-            min_width: 0.0,
-            max_width: width,
-            min_height: 0.0,
-            max_height: height,
-        }
-    }
-
-    pub fn sub_width(&mut self, width: f64) {
-        self.max_width = (self.max_width - width).clamp(self.min_width, f64::INFINITY)
-    }
-
-    pub fn sub_height(&mut self, width: f64) {
-        self.max_height = (self.max_width - width).clamp(self.min_height, f64::INFINITY)
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Offset {
-    pub x: f64,
-    pub y: f64,
-}
-
-impl Offset {
-    pub fn zero() -> Self {
-        Self { x: 0.0, y: 0.0 }
-    }
-}
 
 /*
 Hydrate ViewTree.
@@ -152,9 +100,6 @@ impl<T: 'static> AsAny for T {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EmptyView;
 impl View for EmptyView {
-    // fn children(&self) -> ChildIter {
-    //     Box::new(std::iter::empty())
-    // }
     fn children(&self) -> Vec<AnyView> {
         Vec::new()
     }
@@ -183,9 +128,6 @@ impl Text {
 }
 
 impl View for Text {
-    // fn children(&self) -> ChildIter {
-    //     Box::new(std::iter::empty())
-    // }
     fn children(&self) -> Vec<AnyView> {
         Vec::new()
     }
@@ -204,7 +146,6 @@ impl View for Text {
 
 #[derive(Debug)]
 pub struct Stack {
-    // key: Key,
     pub children: Vec<AnyView>,
 }
 impl Hydrate for Stack {
@@ -216,10 +157,7 @@ impl Hydrate for Stack {
 impl Stack {
     #[track_caller]
     pub fn new() -> Stack {
-        Stack {
-            // key: Key::new(),
-            children: vec![],
-        }
+        Stack { children: vec![] }
     }
 
     #[track_caller]
@@ -262,10 +200,6 @@ impl View for Stack {
     }
 }
 
-// pub struct Container<'a> {
-//     pub children: Vec<Box<dyn View>>,
-// }
-
 pub trait Hydrate {
     fn hydrate(&mut self, _other: &Self)
     where
@@ -292,32 +226,9 @@ pub struct ViewTree {
     pub children: Vec<ViewTree>,
 }
 
-/*
-root: Stack<A, B>
-
-ViewTree
-  view: Stack<A, B>
-  store: A => ViewTree A {} {}
-         B => ViewTree B {} {}
-  body: ()
-
-
-App = Text
-root: Padding<App>
-
-ViewTree
-  view: Padding<App>
-  children: [Text]
-*/
 impl ViewTree {
     #[track_caller]
     pub fn new(root: AnyView) -> ViewTree {
-        // let body = root.body();
-        // let mut children = Vec::new();
-        // for (key, child) in root.children() {
-        //     let tree = ViewTree::new(child);
-        //     children.push((key, tree));
-        // }
         let children = root
             .borrow()
             .children()
@@ -330,15 +241,6 @@ impl ViewTree {
         }
     }
 
-    /*
-    Old: Stack [A,B,C]
-    New: Stack [B,D]
-
-    Hydrate B
-    Drop A
-    Drop C
-    Generate new children for [B,D]
-    */
     pub fn perform_hydrate_dirty(&mut self) {
         let ViewTree { view, children } = self;
         if view.borrow().is_dirty() {
@@ -576,50 +478,6 @@ impl AnyView {
     }
 }
 
-// impl View for AnyView {
-//     fn body(&self) -> AnyView {
-//         self.borrow().body()
-//     }
-//     #[track_caller]
-//     fn key(&self) -> Key {
-//         self.borrow().
-//     }
-//     // #[track_caller]
-//     // fn children<'a>(self: &'a Self) -> ChildIter<'a> {
-//     //     // Box::new([self.body()].into_iter().map(|b| b))
-//     //     Box::new(std::iter::once((self.key(), self.body())))
-//     //     // Box::new(std::iter::empty())
-//     // }
-//     #[track_caller]
-//     fn children<'a>(self: &'a Self) -> Vec<AnyView> {
-//         vec![self.body()]
-//     }
-
-//     fn hydrate_single(&mut self, _other: AnyView) {}
-
-//     fn layout(&self, children: &[ViewTree]) -> Size {
-//         if let [ViewTree { view, children }] = children {
-//             view.layout(children)
-//         } else {
-//             Size {
-//                 width: 0.0,
-//                 height: 0.0,
-//             }
-//         }
-//     }
-
-//     fn set_offset(&self, offset: Offset) {
-//         todo!()
-//     }
-// }
-
-// impl Deref for AnyView {
-//     type Target = dyn View;
-//     fn deref(&self) -> &Self::Target {
-//         self.view.deref()
-//     }
-// }
-
 pub trait ToAnyView: View + Sized {
     #[track_caller]
     fn any_view(self) -> AnyView {
@@ -670,23 +528,3 @@ impl<X: Copy> State<X> {
         self.dirty.get()
     }
 }
-
-/*
-perform_hydrate store tree new =
-  if tree.view == new
-    No changes. Hydrate children.
-    ...
-  else
-    'body' may have changed.
-    tree.view.hydrate(store, new)
-    tree.view.hydrate(tree.store, new.body)
-*/
-
-/*
-AnyView + Vec<ViewTree>: Constraint -> Size
-AnyView.set_offset: Fn(Offset)
-
-Cache: (AnyView, Vec<ViewTree>, Constraint) -> Size
-
-fn query<Property>(AnyView) -> Option<Property>
-*/
