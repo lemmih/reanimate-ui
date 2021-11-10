@@ -1,29 +1,18 @@
 use quill::*;
+use quill_derive::*;
 use quill_termion::*;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hydrate)]
 struct App {
     pub padding: State<u32>,
-}
-
-impl Hydrate for App {
-    fn hydrate(&mut self, _other: &Self) {}
-    fn is_same(&self, other: &Self) -> bool {
-        self.eq(&other)
-    }
-    fn is_dirty(&self) -> bool {
-        self.padding.is_dirty()
-    }
-
-    fn clean(&self) {
-        self.padding.clean()
-    }
+    pub test: bool
 }
 
 impl App {
     fn new() -> Self {
         App {
             padding: State::new(0),
+            test: true,
         }
     }
 }

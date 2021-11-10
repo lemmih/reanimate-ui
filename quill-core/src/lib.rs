@@ -40,7 +40,7 @@ impl Constraint {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Offset {
     pub x: f64,
     pub y: f64,

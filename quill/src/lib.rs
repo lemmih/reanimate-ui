@@ -12,6 +12,7 @@ use std::rc::Rc;
 use ptree::{item::StringItem, print_tree, TreeBuilder};
 
 pub use quill_core::*;
+use quill_derive::*;
 
 // mod smooth;
 
@@ -24,6 +25,14 @@ Hydrate ViewTree.
   Else:
     Walk store to find dirty views.
 */
+
+// Parent->Child:         Properties
+// Child->Parent:         Binding
+// Parent->Distant child: Environment Object
+// Distant child->Parent: Preferences
+
+// State<X>
+// lens: State<X>, X-> &mut Y -> State<Y>
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Key(pub u32);
@@ -104,25 +113,18 @@ impl<T: 'static> AsAny for T {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hydrate)]
 pub struct EmptyView;
 impl View for EmptyView {
     fn children(&self) -> Vec<AnyView> {
         Vec::new()
     }
 }
-impl Hydrate for EmptyView {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hydrate)]
 pub struct Text {
     text: String,
     offset: Cell<Offset>,
-}
-
-impl Hydrate for Text {
-    fn hydrate(&mut self, other: &Self) {
-        self.text = other.text.clone();
-    }
 }
 
 impl Text {
@@ -151,15 +153,9 @@ impl View for Text {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Hydrate)]
 pub struct Stack {
     pub children: Vec<AnyView>,
-}
-
-impl Hydrate for Stack {
-    fn hydrate(&mut self, other: &Self) {
-        self.children = other.children.clone();
-    }
 }
 
 impl Default for Stack {
@@ -422,6 +418,12 @@ pub struct AnyView {
     view: Rc<RefCell<dyn View>>,
     hydrate: Rc<dyn Fn(&AnyView, &AnyView)>,
     is_same: Rc<dyn Fn(&AnyView, &AnyView) -> bool>,
+}
+
+impl PartialEq for AnyView {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.view, &other.view)
+    }
 }
 
 impl std::fmt::Debug for AnyView {

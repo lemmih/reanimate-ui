@@ -1,4 +1,5 @@
 use quill::*;
+use quill_derive::*;
 use std::cell::Cell;
 use std::io::{stdin, stdout, Write};
 use std::rc::Rc;
@@ -10,7 +11,7 @@ use termion::screen::*;
 use termion::terminal_size;
 use termion::{clear, cursor};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hydrate)]
 pub struct TermText {
     pub text: String,
     pub offset: Cell<Offset>,
@@ -31,12 +32,6 @@ impl TermText {
             self.text
         )
         .unwrap();
-    }
-}
-
-impl Hydrate for TermText {
-    fn hydrate(&mut self, other: &Self) {
-        self.text = other.text.clone();
     }
 }
 
@@ -230,7 +225,7 @@ impl<T: View + Clone> View for Box<T> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Hydrate)]
 pub struct Padding {
     pub padding: f64,
     pub child: AnyView,
@@ -252,13 +247,6 @@ impl Padding {
     }
 
     pub fn render(_screen: impl std::io::Write) {}
-}
-
-impl Hydrate for Padding {
-    fn hydrate(&mut self, other: &Self) {
-        self.padding = other.padding;
-        self.child = other.child.clone();
-    }
 }
 
 impl View for Padding {

@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "quill-derive",
     "quill-core",
     "quill",
     "quill-termion",
