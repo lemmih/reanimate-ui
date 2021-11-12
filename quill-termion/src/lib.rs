@@ -303,6 +303,7 @@ pub fn run(app: impl View + Clone) -> std::io::Result<()> {
     let mut tree = ViewTree::new(app.clone().any_view());
 
     'outer: loop {
+        use termion::event as tui;
         // write!(screen, "{}", clear::All)?;
         while let Ok(evt) = event_receiver.try_recv() {
             let evt_str = format!("{:?}", evt);
@@ -315,19 +316,16 @@ pub fn run(app: impl View + Clone) -> std::io::Result<()> {
                 evt_str
             )?;
             match evt {
-                termion::event::Event::Key(termion::event::Key::Char('q')) => break 'outer,
-                termion::event::Event::Key(termion::event::Key::Char('\t')) => {
+                tui::Event::Key(tui::Key::Char('q')) => break 'outer,
+                tui::Event::Key(tui::Key::Char('\t')) => {
                     write!(screen, "{}", clear::All)?;
                     mode.toggle()
                 }
                 // Event::Key(Key::Char('1')) => write!(screen, "{}", ToMainScreen)?,
                 // Event::Key(Key::Char('2')) => write!(screen, "{}", ToAlternateScreen)?,
-                termion::event::Event::Mouse(mouse_event) => match mouse_event {
-                    termion::event::MouseEvent::Press(_btn, x, y) => tree.event(
-                        &quill::Event::MousePress(MouseButton::Left, x as f64, y as f64),
-                    ),
-                    _ => {}
-                },
+                tui::Event::Mouse(tui::MouseEvent::Press(_btn, x, y)) => tree.event(
+                    &quill::Event::MousePress(MouseButton::Left, x as f64, y as f64),
+                ),
                 _ => (),
             }
             screen.flush()?;

@@ -2,7 +2,6 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn;
 use syn::*;
 
 #[proc_macro_derive(Hydrate)]
@@ -21,7 +20,7 @@ fn is_state_type(ty: &Type) -> bool {
             path: Path { segments, .. },
             ..
         }) => match segments.first() {
-            Some(segment) => segment.ident.to_string() == "State",
+            Some(segment) => segment.ident == "State",
             None => false,
         },
         _ => false,
