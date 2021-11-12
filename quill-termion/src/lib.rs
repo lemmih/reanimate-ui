@@ -14,21 +14,19 @@ use termion::{clear, cursor};
 #[derive(Debug, Clone, PartialEq, Hydrate)]
 pub struct TermText {
     pub text: String,
-    pub offset: Cell<Offset>,
 }
 
 impl TermText {
     pub fn new(text: impl ToString) -> TermText {
         TermText {
             text: text.to_string(),
-            offset: Cell::new(Offset { x: 1.0, y: 1.0 }),
         }
     }
-    pub fn render(&self, screen: &mut impl std::io::Write) {
+    pub fn render(&self, offset: Offset, screen: &mut impl std::io::Write) {
         write!(
             screen,
             "{}{}",
-            cursor::Goto(self.offset.get().x as u16, self.offset.get().y as u16),
+            cursor::Goto(offset.x as u16, offset.y as u16),
             self.text
         )
         .unwrap();
@@ -48,10 +46,6 @@ impl View for TermText {
             width: self.text.len() as f64,
             height: 1.0,
         }
-    }
-
-    fn set_offset(&self, _children: &[ViewTree], offset: Offset) {
-        self.offset.set(offset)
     }
 }
 
@@ -95,7 +89,6 @@ impl View for Stats {
 #[derive(Clone)]
 pub struct OnClick<T: View> {
     pub cb: std::rc::Rc<dyn Fn()>,
-    pub offset: Cell<Offset>,
     pub child: T,
 }
 impl<T: View> std::fmt::Debug for OnClick<T> {
@@ -113,11 +106,7 @@ impl<X: View> Clickable for X {}
 
 impl<T: View> OnClick<T> {
     pub fn new(cb: std::rc::Rc<dyn Fn()>, child: T) -> Self {
-        OnClick {
-            cb,
-            child,
-            offset: Cell::new(Offset::zero()),
-        }
+        OnClick { cb, child }
     }
 }
 
@@ -148,16 +137,9 @@ impl<T: View + Clone> View for OnClick<T> {
             Size::zero()
         }
     }
-    fn set_offset(&self, children: &[ViewTree], offset: Offset) {
-        self.offset.set(offset);
-        for ViewTree { view, children } in children {
-            view.borrow().set_offset(children, offset)
-        }
-    }
-    fn event(&self, size: Size, _children: &[ViewTree], event: &Event) {
+    fn event(&self, size: Size, offset: Offset, _children: &[ViewTree], event: &Event) {
         match event {
             Event::MousePress(_btn, x, y) => {
-                let offset = self.offset.get();
                 // dbg!(x, y, size, offset);
                 if *x >= offset.x
                     && *x <= offset.x + size.width - 1.0
@@ -219,8 +201,8 @@ impl<T: View + Clone> View for Box<T> {
     fn set_offset(&self, children: &[ViewTree], mut offset: Offset) {
         offset.x += 1.0;
         offset.y += 1.0;
-        for ViewTree { view, children } in children {
-            view.borrow().set_offset(children, offset)
+        for child in children {
+            child.set_offset(offset)
         }
     }
 }
@@ -271,8 +253,8 @@ impl View for Padding {
     fn set_offset(&self, children: &[ViewTree], mut offset: Offset) {
         offset.x += self.padding;
         offset.y += self.padding;
-        for ViewTree { view, children } in children {
-            view.borrow().set_offset(children, offset)
+        for child in children {
+            child.set_offset(offset)
         }
     }
 }
@@ -366,7 +348,7 @@ pub fn run(app: impl View + Clone) -> std::io::Result<()> {
             Mode::UI => {
                 for view in tree.flatten() {
                     if let Some(text) = view.downcast_ref::<TermText>() {
-                        text.render(&mut screen);
+                        text.render(view.offset.get(), &mut screen);
                     }
                 }
                 screen.flush()?;

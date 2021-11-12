@@ -80,7 +80,7 @@ pub trait View: Hydrate + AsAny + Debug + 'static {
         vec![self.body()]
     }
 
-    fn event(&self, _size: Size, _children: &[ViewTree], _event: &Event) {}
+    fn event(&self, _size: Size, _offset: Offset, _children: &[ViewTree], _event: &Event) {}
 
     fn layout(&self, children: &[ViewTree], constraint: Constraint) -> Size {
         if let [child] = children {
@@ -93,8 +93,8 @@ pub trait View: Hydrate + AsAny + Debug + 'static {
     }
 
     fn set_offset(&self, children: &[ViewTree], offset: Offset) {
-        for ViewTree { view, children } in children {
-            view.borrow().set_offset(children, offset)
+        for child in children {
+            child.set_offset(offset)
         }
     }
 }
@@ -124,14 +124,12 @@ impl View for EmptyView {
 #[derive(Debug, Clone, PartialEq, Hydrate)]
 pub struct Text {
     text: String,
-    offset: Cell<Offset>,
 }
 
 impl Text {
     pub fn new(text: impl ToString) -> Text {
         Text {
             text: text.to_string(),
-            offset: Cell::new(Offset { x: 0.0, y: 0.0 }),
         }
     }
 }
@@ -146,10 +144,6 @@ impl View for Text {
             width: self.text.len() as f64,
             height: 1.0,
         }
-    }
-
-    fn set_offset(&self, _children: &[ViewTree], offset: Offset) {
-        self.offset.set(offset)
     }
 }
 
@@ -203,9 +197,9 @@ impl View for Stack {
     }
 
     fn set_offset(&self, children: &[ViewTree], mut offset: Offset) {
-        for ViewTree { view, children } in children {
-            let size = view.size.get();
-            view.borrow().set_offset(children, offset);
+        for child in children {
+            let size = child.view.size.get();
+            child.set_offset(offset);
             offset.y += size.height;
         }
     }
@@ -355,6 +349,7 @@ impl ViewTree {
     }
 
     pub fn set_offset(&self, offset: Offset) {
+        self.view.offset.set(offset);
         self.view.borrow().set_offset(&self.children, offset);
     }
 
@@ -395,9 +390,12 @@ impl ViewTree {
     }
 
     pub fn event(&self, event: &Event) {
-        self.view
-            .borrow()
-            .event(self.view.size.get(), &self.children, event);
+        self.view.borrow().event(
+            self.view.size.get(),
+            self.view.offset.get(),
+            &self.children,
+            event,
+        );
         for child in self.children.iter() {
             child.event(event);
         }
@@ -415,6 +413,7 @@ impl ViewTree {
 pub struct AnyView {
     key: Key,
     pub size: Rc<Cell<Size>>,
+    pub offset: Rc<Cell<Offset>>,
     view: Rc<RefCell<dyn View>>,
     hydrate: Rc<dyn Fn(&AnyView, &AnyView)>,
     is_same: Rc<dyn Fn(&AnyView, &AnyView) -> bool>,
@@ -442,6 +441,7 @@ impl AnyView {
         AnyView {
             key: Key::new(),
             size: Rc::new(Cell::new(Size::zero())),
+            offset: Rc::new(Cell::new(Offset::zero())),
             view: Rc::new(RefCell::new(view)),
             hydrate: Rc::new(|a, b| {
                 if let Some(mut a) = a.downcast_mut::<V>() {
@@ -545,3 +545,41 @@ impl<X: Copy> State<X> {
         self.dirty.get()
     }
 }
+
+// pub trait StateObject: Any + Clone + Default {}
+
+// pub struct Context {
+//     objects: HashMap<TypeId, Box<dyn Any>>,
+// }
+
+// impl Context {
+//     pub fn new() -> Self {
+//         Context {
+//             objects: HashMap::new(),
+//         }
+//     }
+
+//     pub fn get<Object: StateObject>(&self) -> Object {
+//         let o_type = TypeId::of::<Object>();
+//         match self
+//             .objects
+//             .get(&o_type)
+//             .and_then(|any| any.downcast_ref::<Object>())
+//         {
+//             Some(obj) => obj.clone(),
+//             None => Object::default(),
+//         }
+//     }
+
+//     pub fn upd<Object: StateObject>(&mut self, cb: impl FnOnce(&mut Object)) {
+//         let o_type = TypeId::of::<Object>();
+//         match self
+//             .objects
+//             .get_mut(&o_type)
+//             .and_then(|any| any.downcast_mut::<Object>())
+//         {
+//             Some(obj) => cb(obj),
+//             None => (),
+//         }
+//     }
+// }

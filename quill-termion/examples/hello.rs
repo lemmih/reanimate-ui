@@ -17,7 +17,11 @@ impl App {
 
 impl View for App {
     fn body(&self) -> AnyView {
+        // let Padding(padding) = ctx.get();
         let mut stack = Stack::new();
+        // stack.push(TermText::new("Inc padding").on_click(ctx.mutate(|ctx| {
+        //     ctx.upd(|Padding(x)| *x = x+1)
+        // })));
         stack.push(TermText::new("Inc padding").on_click({
             let this = self.clone();
             move || this.padding.set(this.padding.get() + 1)
